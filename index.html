@@ -697,6 +697,9 @@
     function syncResultToDatabase() {
       if (!gameState.studentName) return;
 
+      const totalQuizCount = currentActiveQuizQuestions ? currentActiveQuizQuestions.length : 30;
+      const correctQuizCount = Object.values(gameState.quizAnswers).filter(a => a.isCorrect).length;
+
       const recordData = {
         id: gameState.sessionId,
         name: gameState.studentName,
@@ -704,7 +707,8 @@
         stars: gameState.totalStars,
         mode1Matched: gameState.mode1Matched,
         mode2ArrowsCount: gameState.mode2Arrows.length,
-        quizScore: Object.values(gameState.quizAnswers).filter(a => a.isCorrect).length,
+        quizScore: correctQuizCount,
+        quizTotal: totalQuizCount,
         timestamp: new Date().toLocaleString('id-ID')
       };
 
@@ -750,6 +754,8 @@
       }
 
       gameState.records.forEach((rec, idx) => {
+        const total = rec.quizTotal || 30;
+        const isPassed = rec.quizScore >= Math.round(total * 0.7);
         const tr = document.createElement('tr');
         tr.className = "hover:bg-amber-50/50 transition";
         tr.innerHTML = `
@@ -759,7 +765,7 @@
           <td class="p-2.5 text-center font-bold text-amber-600">⭐ ${rec.stars}</td>
           <td class="p-2.5 text-center">${rec.mode1Matched} / 8</td>
           <td class="p-2.5 text-center">${rec.mode2ArrowsCount} Panah</td>
-          <td class="p-2.5 text-center font-bold ${rec.quizScore === 3 ? 'text-green-600' : 'text-slate-600'}">${rec.quizScore} / 3</td>
+          <td class="p-2.5 text-center font-bold ${isPassed ? 'text-green-600' : 'text-slate-600'}">${rec.quizScore} / ${total}</td>
           <td class="p-2.5 text-slate-400 text-[10px]">${rec.timestamp}</td>
         `;
         tbody.appendChild(tr);
@@ -774,9 +780,10 @@
       }
 
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += "No,Nama Siswa,Kelas/Absen,Total Bintang,Mode 1 (Organisme),Mode 2 (Panah),Nilai Kuis,Waktu Rekam\n";
+      csvContent += "No,Nama Siswa,Kelas/Absen,Total Bintang,Mode 1 (Organisme),Mode 2 (Panah),Nilai Kuis (Benar/Total),Waktu Rekam\n";
 
       gameState.records.forEach((rec, idx) => {
+        const total = rec.quizTotal || 30;
         const row = [
           idx + 1,
           `"${rec.name}"`,
@@ -784,7 +791,7 @@
           rec.stars,
           `${rec.mode1Matched}/8`,
           rec.mode2ArrowsCount,
-          `${rec.quizScore}/3`,
+          `${rec.quizScore}/${total}`,
           `"${rec.timestamp}"`
         ].join(",");
         csvContent += row + "\n";
